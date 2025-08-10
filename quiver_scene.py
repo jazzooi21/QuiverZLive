@@ -232,7 +232,7 @@ class QuiverScene(QGraphicsScene):
 
         shape.setFlag(QGraphicsItem.ItemIsSelectable)
 
-    def _commit_edge(self, shape_u, shape_v):
+    def _commit_edge(self, shape_u, shape_v):   
         uid = shape_u.data(0)
         vid = shape_v.data(0)
 
@@ -349,7 +349,7 @@ class QuiverScene(QGraphicsScene):
     def _show_context_menu_at(self, scene_pos, screen_pos):
         if self.mode != "cursor":
             return
-
+    
         item = self.itemAt(scene_pos, QTransform())
         while item and isinstance(item, QGraphicsTextItem):
             item = item.parentItem()
@@ -377,9 +377,9 @@ class QuiverScene(QGraphicsScene):
                 u, v = it.data(0)
                 if u == nid or v == nid:
                     self.removeItem(it)
-        # 2) remove the node shape (its child label is auto-removed)
+        # remove the node shape (its child label is auto-removed)
         self.removeItem(node_item)
-        # 3) remove from the MultiGraph (also drops all edges!)
+        # remove from the MultiGraph (also drops all edges!)
         self.graph.remove_node(nid)
 
     def _remove_edge(self, edge_item):

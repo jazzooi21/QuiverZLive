@@ -1,6 +1,6 @@
 import sys
 from PySide6.QtWidgets import QApplication, QProxyStyle, QStyle
-from main_window import MainWindow
+from window_main import MainWindow
 
 # this custom style allows tooltips to appear instantly without delay
 class InstantTooltipStyle(QProxyStyle):

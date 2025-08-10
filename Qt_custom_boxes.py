@@ -8,7 +8,7 @@ from constants import SCENE_WIDTH, SCENE_HEIGHT
 def show_scrollable_message(self, title: str, message: str, font_size: int = 24):
     dialog = QDialog(self)
     dialog.setWindowTitle(title)
-    dialog.resize(SCENE_WIDTH/2, SCENE_HEIGHT/2)  # Set desired size
+    dialog.resize(SCENE_WIDTH/1.25, SCENE_HEIGHT/2)  # Set desired size
 
     layout = QVBoxLayout(dialog)
 

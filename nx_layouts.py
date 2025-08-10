@@ -7,26 +7,25 @@ def plot_caterpillar(G, hsep=1.0, vsep=1.0):
       - the tree's diameter (longest path) is laid out horizontally,
       - side-branches of degree 1 or 2 are placed strictly up/down,
       - side-branches of degree >2 are fanned out evenly around each spine node.
-
     Returns a pos dict suitable for nx.draw.
     """
-    # 1. Find one endpoint of the diameter
+    # Find one endpoint of the diameter
     start = next(iter(G))
     far1 = max(
         nx.single_source_shortest_path_length(G, start),
         key=lambda x: nx.shortest_path_length(G, start, x)
     )
-    # 2. From that endpoint, find the opposite endpoint & the path
+    # Find the opposite endpoint & the path
     far2 = max(
         nx.single_source_shortest_path_length(G, far1),
         key=lambda x: nx.shortest_path_length(G, far1, x)
     )
     spine = nx.shortest_path(G, far1, far2)
 
-    # 3. Position the spine on y=0
+    # Position spine on y=0
     pos = {v: (i*hsep, 0) for i, v in enumerate(spine)}
 
-    # 4. Attach side-branches
+    # Attach side-branches
     for i, v in enumerate(spine):
         x0, y0 = pos[v]
         leaves = [u for u in G.neighbors(v) if u not in spine]
@@ -68,12 +67,12 @@ def plot_sunshine(G, radius=1.0, vsep=0.5):
           * b > 6: fanned over ±90° as before.
       - Deeper nodes follow their parent’s ray outward by vsep.
     """
-    # 1) Largest cycle
+    # Largest cycle
     cycles = nx.cycle_basis(nx.Graph(G))
     cycle = max(cycles, key=len)
     n = len(cycle)
 
-    # 2) Place cycle nodes on regular polygon
+    # Place cycle nodes on regular polygon
     pos = {}
     cycle_angle = {}
     for i, v in enumerate(cycle):
@@ -81,7 +80,7 @@ def plot_sunshine(G, radius=1.0, vsep=0.5):
         cycle_angle[v] = θ
         pos[v] = (math.cos(θ)*radius, math.sin(θ)*radius)
 
-    # 3) First‐level tails
+    # First‐level tails
     queue = []
     direction = {}
 
@@ -112,7 +111,7 @@ def plot_sunshine(G, radius=1.0, vsep=0.5):
             direction[u] = (dx, dy)
             queue.append(u)
 
-    # 4) BFS for deeper nodes
+    # BFS for deeper nodes
     visited = set(cycle) | set(direction)
     while queue:
         parent = queue.pop(0)

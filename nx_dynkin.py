@@ -1,10 +1,12 @@
 import networkx as nx
 
+# SU
 def Dynkin_A(n):
     if n < 1:
         raise ValueError("n must be at least 1 for type A_n")
     return nx.path_graph(n)
 
+# SO
 def Dynkin_D(n):
     if n < 4:
         raise ValueError("n must be at least 4 for type D_n")
@@ -13,6 +15,7 @@ def Dynkin_D(n):
     G.add_edge(n-2, n)
     return G
 
+# exceptional groups
 def Dynkin_E(n):
     if n in (6, 7, 8):
         G = nx.Graph()
