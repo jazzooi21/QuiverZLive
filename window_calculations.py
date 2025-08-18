@@ -1,172 +1,34 @@
 from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-                               QPushButton, QCheckBox, QGraphicsView, QGraphicsScene,
-                               QMessageBox, QDialog, QTextEdit,
-                               QInputDialog)
+                               QPushButton, QCheckBox, QGraphicsView,
+                               QMessageBox, QDialog, QTextEdit, QInputDialog,
+                               QLabel, QScrollArea)
 from PySide6.QtGui    import QPen, QBrush, QColor, QPainter
 from PySide6.QtCore   import QRectF, Qt, QLineF
 
+
+
 from constants import NODE_RADIUS, PEN_NODE, SCENE_WIDTH, SCENE_HEIGHT
-from graph_model import QuiverGraph, compute_balance
-from nx_layouts import plot_caterpillar, plot_sunshine
+
+from Qt_zoomable_view import ZoomableGraphicsView
+from window_hasse import HasseDiagramView
+from static_scene import _StaticScene
+
+from graph_model import QuiverGraph, compute_balance, mixU_linear, QG_to_Mv, Mv_to_QG
 from nx_dynkin import Dynkin_A, Dynkin_D, Dynkin_E
+from nx_layouts import plot_caterpillar, plot_sunshine, plot_sunshine_multicycles
 from Qt_custom_boxes import show_scrollable_message, show_warning_with_link
-from monopole_formula import hilbert_series_from_quiver_graph
 
 
-import math
-import sympy as sp
+from calc_HS_C import hilbert_series_from_quiver_graph
+from calc_linearmirror import MagneticQuiver
+from calc_hasse import fission_decay
+
+
 import networkx as nx
 import copy
 from collections import Counter
 import time
-
-class _StaticScene(QGraphicsScene):
-    """Draws the graph once; mouse & key events are ignored."""
-
-    def __init__(self, g: QuiverGraph, *args, **kw):
-        super().__init__(*args, **kw)
-        self._draw_graph(g)
-        self.setSceneRect(self.itemsBoundingRect())
-
-    # suppress interaction
-    def mousePressEvent(self, _):   pass
-    def mouseMoveEvent (self, _):   pass
-    def mouseReleaseEvent(self, _): pass
-    def keyPressEvent(self,  _):    pass
-
-    def drawBackground(self, painter: QPainter, rect: QRectF) -> None:
-        # Solid white background
-        painter.setBrush(QColor(255, 255, 255))
-        painter.setPen(Qt.NoPen)
-        painter.drawRect(rect)
-        
-
-    def _draw_graph(self, g: QuiverGraph):
-            """
-            Paint the graph exactly as recorded in `g`.
-
-            • Uses node['pos'] when available.
-            • If several parallel edges exist, draw each with a slight angle offset:
-                – for up to 4 edges, use 0°, 90°, 180°, 270°,
-                – for more, evenly spread 360°/n.
-            • Node label replicates the logic from the main editor window.
-            """
-            # ---------- 1. node positions ----------
-            cycles = nx.cycle_basis(nx.Graph(g))
-            if not cycles:
-                pos = plot_caterpillar(g,
-                    hsep=5 * NODE_RADIUS + 10,  # horizontal spacing
-                    vsep=5 * NODE_RADIUS + 10,  # vertical spacing
-                )
-            elif len(cycles) == 1:
-                pos = plot_sunshine(g,
-                    radius=5 * NODE_RADIUS + 10,  # radius of the cycle
-                    vsep=5 * NODE_RADIUS + 10,    # vertical spacing for branches
-                )
-            else:
-                pos = nx.spring_layout(g, seed=42, scale=5 * NODE_RADIUS + 10)
-
-                5 * NODE_RADIUS + 10
-
-            for n, (x, y) in pos.items():
-                g.nodes[n]["pos"] = (x, y)
-
-            # ---------- 2. draw edges --------------
-            drawn_pairs = {}
-            for u, v, key in g.edges(keys=True):
-                x1, y1 = pos[u]
-                x2, y2 = pos[v]
-
-                # 1) find how many parallel edges there are between u and v
-                total = g.number_of_edges(u, v)
-
-                # 2) sort the pair so we index correctly
-                pair = tuple(sorted((u, v)))
-                idx  = drawn_pairs.get(pair, 0)
-                drawn_pairs[pair] = idx + 1
-
-                # 3) compute the direction vector from u→v
-                dx = x2 - x1
-                dy = y2 - y1
-                length = math.hypot(dx, dy)
-                if length == 0:
-                    # overlapping nodes: skip or draw a loop
-                    continue
-
-                # 4) perpendicular unit vector (rotated 90°)
-                ux = -dy / length
-                uy =  dx / length
-
-                # 5) decide your total “spacing” between adjacent edges
-                if total in [1,2]:
-                    spacing = 12
-                else:
-                    spacing = 32 / total
-
-                # 6) compute a centered multiplier
-                offset_index = idx - (total - 1) / 2.0
-
-                # 7) displacement along the perpendicular direction
-                ox = ux * spacing * offset_index
-                oy = uy * spacing * offset_index
-
-                # 8) draw the line, shifted by (ox, oy)
-                self.addLine(
-                    QLineF(x1 + ox, y1 + oy, x2 + ox, y2 + oy),
-                    QPen(Qt.black, 2)
-                )
-
-            # ---------- 3. draw nodes --------------
-            for n, data in g.nodes(data=True):
-                x, y = pos[n]
-                flav_gauge = data.get("flav_gauge", "gauge")
-
-                # shape
-                shape_func = self.addEllipse if flav_gauge == "gauge" else self.addRect
-                item = shape_func(
-                    QRectF(x - NODE_RADIUS, y - NODE_RADIUS,
-                        2 * NODE_RADIUS, 2 * NODE_RADIUS),
-                    PEN_NODE, QBrush(Qt.white)
-                )
-                item.setData(0, n)
-
-                # label text identical to editor rule
-                gp_type = data.get("gp_type", "?")
-                gp_rank = data.get("gp_rank", "?")
-                if gp_type == "U" and flav_gauge == "flav":
-                    label_txt = f"{gp_rank}"
-                else:
-                    label_txt = f"{gp_type}({gp_rank})"
-
-                label = self.addText(label_txt)
-                label.setDefaultTextColor(Qt.black)
-                label.setPos(
-                    x - label.boundingRect().width()/2,
-                    y - label.boundingRect().height()/2
-                )
-                tooltip = self.format_tooltip(g, n)
-                label_txt = tooltip.splitlines()[0]
-                item.setToolTip(tooltip)
-
-
-    def format_tooltip(self, g: QuiverGraph, node_id: int) -> str:
-        """
-        Return a plain-text tooltip string: group + optional balance.
-        """
-        data = g.nodes[node_id]
-        gp_type   = data.get("gp_type", "?")
-        gp_rank   = data.get("gp_rank", "?")
-        flav_flag = data.get("flav_gauge", "")
-
-        gp_name = f"{gp_type}({gp_rank})\nType: {flav_flag}"
-
-        balance = compute_balance(g, node_id)
-
-        output_str = f"Group: {gp_name}"
-        if balance is not None:
-            output_str += f"\nBalance: b = {balance}"
-        return output_str
-
+import numpy as np
 
 
 
@@ -175,12 +37,42 @@ class CalculationsWindow(QMainWindow):
         super().__init__(parent)
         self.setWindowTitle("Quiver Calculations")
         self.graph = g                # reference only; NOT copied
-
-        # --- central, read-only view ---
         self.scene = _StaticScene(self.graph)
-        self.view  = QGraphicsView(self.scene)
+        self.view  = ZoomableGraphicsView(self.scene)
         self.view.setRenderHint(QPainter.Antialiasing)
         self.resize(1000, 650)
+
+        
+        # --- pos if no pos ----
+        if not all("pos" in d for _, d in g.nodes(data=True)):
+            cycles = nx.cycle_basis(nx.Graph(g))
+            if not cycles:
+                pos = plot_caterpillar(
+                    g,
+                    hsep=5 * NODE_RADIUS + 10,
+                    vsep=5 * NODE_RADIUS + 10,
+                )
+            elif len(cycles) == 1:
+                pos = plot_sunshine(
+                    g,
+                    radius=5 * NODE_RADIUS + 10,
+                    vsep=5 * NODE_RADIUS + 10,
+                )
+            else:
+                pos = plot_sunshine_multicycles(g)
+                scale = 5 * NODE_RADIUS + 10
+                for k in pos:
+                    pos[k] = (pos[k][0] * scale, pos[k][1] * scale)
+
+            for n, (x, y) in pos.items():
+                self.graph.nodes[n]["pos"] = (x, y)
+
+        # Print node positions for debugging
+        # for n, d in self.graph.nodes(data=True):
+        #     print(f"Node {n}: pos = {d.get('pos')}")
+
+
+
 
         # --- side controls ---
         
@@ -188,18 +80,28 @@ class CalculationsWindow(QMainWindow):
         s_lay = QVBoxLayout(side)
         s_lay.setAlignment(Qt.AlignTop)        
 
-        # Side-by-side Gauge/Ungauge buttons
+        # -------- Adjacency matrix button ---------------------
+        self.show_adj_btn = QPushButton("Show Adjacency Matrix")
+        self.show_adj_btn.setToolTip("Display the adjacency matrix and node ranks vector of the current quiver.")
+        self.show_adj_btn.clicked.connect(self._calc_adjM)
+
+        if any(d.get("node_type") == "flav" for _, d in self.graph.nodes(data=True)):
+            self.show_adj_btn.setEnabled(False)
+            self.show_adj_btn.setToolTip("Calculate adjacency matrix and ranks vector for the quiver.\n" \
+                                              "Only valid for unframed (no flavours) unitary quivers.")
+            
+        elif any(d.get("node_type") == "gauge" and d.get("gp_type") != "U" for _, d in self.graph.nodes(data=True)):
+            self.show_adj_btn.setEnabled(False)
+            self.show_adj_btn.setToolTip("Calculate adjacency matrix and ranks vector for the quiver.\n" \
+                                              "Only valid for unframed (no flavours) unitary quivers.")
+
+
+        # --------------------- Gauge/Ungauge buttons ---------------------
         self.gauge_btn = QPushButton("Gauge")
         self.gauge_btn.clicked.connect(self._gauge)
         self.ungauge_btn = QPushButton("Ungauge")
         self.ungauge_btn.clicked.connect(self._ungauge)
-        gauge_ungauge_row = QWidget()
-        gauge_ungauge_layout = QHBoxLayout(gauge_ungauge_row)
-        gauge_ungauge_layout.setContentsMargins(0, 0, 0, 0)
-        gauge_ungauge_layout.addWidget(self.gauge_btn)
-        gauge_ungauge_layout.addWidget(self.ungauge_btn)
-        # Enable/disable buttons based on presence of flavour nodes
-        flavour_nodes = [n for n, d in self.graph.nodes(data=True) if d.get("flav_gauge") == "flav"]
+        flavour_nodes = [n for n, d in self.graph.nodes(data=True) if d.get("node_type") == "flav"]
         if bool(flavour_nodes): # there are flavour nodes
             self.gauge_btn.setEnabled(True)
             self.gauge_btn.setToolTip("Gauge quiver by connecting all (unitary) flavour nodes into a U(1) gauge node.")
@@ -211,46 +113,158 @@ class CalculationsWindow(QMainWindow):
             self.ungauge_btn.setEnabled(True)
             self.ungauge_btn.setToolTip("Ungauge/decouple a U(1) factor, analogous to fixing centre of mass.")
             
-
+        # --------------------- Combine flavours button ---------------------
         self.combine_btn = QPushButton("Combine Flavours")
-        self.combine_btn.setToolTip("If multiple unitary flavour nodes are connected to the same gauge node,"
+        self.combine_btn.setToolTip("If multiple unitary flavour nodes are connected to the same gauge node,\n"
                                               "combine them into one flavour node whose rank is sum of originals.")
         self.combine_btn.clicked.connect(self._combine_flavours)
 
-        self.color_chk = QCheckBox("Color by balance")
-        self.color_chk.setToolTip("red = underbalanced\n"
-                                  "white = balanced\n"
-                                  "gray = overbalanced")
-        self.color_chk.setChecked(True)
-        self._toggle_balance_colours(2)
-        self.color_chk.stateChanged.connect(self._toggle_balance_colours)
 
+        # --------------------- Node colour mode buttons ---------------------
+        self.colour_none_btn = QPushButton("None")
+        self.colour_balance_btn = QPushButton("Balance")
+        self.colour_group_btn = QPushButton("Group")
 
-        self.glob_symm_subgp_C_btn = QPushButton("Coulomb Global Symmetry Subgroup")
-        self.glob_symm_subgp_C_btn.setToolTip("Calculate Coulomb global symmetry subgroup.\n"
+        self.colour_none_btn.setCheckable(True)
+        self.colour_balance_btn.setCheckable(True)
+        self.colour_group_btn.setCheckable(True)
+
+        self.colour_none_btn.setChecked(True) # default none
+
+        self.colour_none_btn.setToolTip("All nodes white.")
+        self.colour_balance_btn.setToolTip("red = underbalanced\n" \
+                                          "white = balanced\n" \
+                                          "gray = overbalanced")
+        self.colour_group_btn.setToolTip("white = U (unitary)\n" \
+                                        "gray = SU (special unitary)\n" \
+                                        "red = SO (special orthogonal)\n" \
+                                        "blue = USp (symplectic)")
+        # Default: Balance colouring
+        self.colour_none_btn.clicked.connect(lambda: self._colours("none"))
+        self.colour_balance_btn.clicked.connect(lambda: self._colours("bal"))
+        self.colour_group_btn.clicked.connect(lambda: self._colours("gp"))
+
+        
+
+        # --------------------- Global symm subgp buttons ---------------------
+        self.glob_symm_subgp_C_btn = QPushButton("Coulomb")
+        self.glob_symm_subgp_C_btn.setToolTip("Calculate Coulomb Branch global symmetry subgroup.\n"
                                               "(this may or may not be the global symmetry group)\n"
                                               "Currently only developed for U and SU gauge nodes.")
         self.glob_symm_subgp_C_btn.clicked.connect(self._glob_symm_subgp_C)
 
-        self.glob_symm_subgp_H_btn = QPushButton("Higgs Global Symmetry Subgroup")
-        self.glob_symm_subgp_H_btn.setToolTip("Calculate Higgs global symmetry subgroup.\n"
-                                              "(this may or may not be the global symmetry group)\n"
-                                              "Currently only developed for unitary flavour nodes.")
+        self.glob_symm_subgp_H_btn = QPushButton("Higgs")
+        self.glob_symm_subgp_H_btn.setToolTip("Calculate Higgs Branch global symmetry subgroup.\n"
+                                              "(this may or may not be the global symmetry group)")
         self.glob_symm_subgp_H_btn.clicked.connect(self._glob_symm_subgp_H)
 
-        self.hilbert_series_btn = QPushButton("Coulomb Branch Hilbert Series")
-        self.hilbert_series_btn.setToolTip("Calculate the Hilbert Series of the Coulomb branch for the current quiver.")
-        self.hilbert_series_btn.clicked.connect(self._HS_C)
+        gauge_nodes = [d for n, d in self.graph.nodes(data=True) if d.get("node_type") == "gauge"]    
+        flav_nodes = [d for n, d in self.graph.nodes(data=True) if d.get("node_type") == "flav"]
+        nodes = [d for n, d in self.graph.nodes(data=True)]
+
+        if any(d.get("gp_type") in ("SO","USp") for d in nodes) and any(d.get("gp_type") in ("U","SU") for d in nodes):
+            self.glob_symm_subgp_H_btn.setEnabled(False)
+            self.glob_symm_subgp_H_btn.setToolTip("Calculate Higgs Branch global symmetry subgroup.\n"
+                                              "(this may or may not be the global symmetry group)\n"
+                                              "Currently only developed for unitary or orthosymplectic gauge nodes.\n"
+                                              "Not implemented for unitary-orthosymplectic quivers.")
+            
+
+        # --------------------- HS buttons ---------------------
+        self.HS_C_btn = QPushButton("Coulomb")
+        self.HS_C_btn.setToolTip("Calculate the Hilbert Series of the Coulomb branch for the current quiver.")
+        self.HS_C_btn.clicked.connect(self._HS_C)
+
+        self.HS_H_btn = QPushButton("Higgs")
+        self.HS_H_btn.setToolTip("Calculate the Hilbert Series of the Higgs branch for the current quiver.")
+        self.HS_H_btn.setEnabled(False)
+
+        # --------------------- 3d Mirror Button ---------------------
+        self.linear_mirror_btn = QPushButton("Find 3d Mirror")
+        self.linear_mirror_btn.setToolTip("Attempt to find the 3d mirror of the current quiver.\n"
+                                   "Currently implemented for linear mixed unitary quivers.")
+        self.linear_mirror_btn.clicked.connect(self._linear_3d_mirror)
+
+        if mixU_linear(self.graph): # quiver is linear and mixed unitary
+            self.linear_mirror_btn.setEnabled(True)
+            self.linear_mirror_btn.setToolTip("Find the (ungauged) 3d mirror of this linear mixed unitary quiver.")
+        else: 
+            self.linear_mirror_btn.setEnabled(False)
+            self.linear_mirror_btn.setToolTip("3d mirror calculation is only implemented for linear, mixed unitary quivers.")
 
         
-        s_lay.addWidget(gauge_ungauge_row)
+        # ------------------ Hasse Button ---------------------
+        self.hasse_btn = QPushButton("Hasse Diagram")
+        self.hasse_btn.setToolTip("Calculate Hasse diagram.")
+        self.hasse_btn.clicked.connect(self._hasse)
+        # Only valid for unframed unitary quivers
+        if any(d.get("node_type") == "flav" for _, d in self.graph.nodes(data=True)):
+            self.hasse_btn.setEnabled(False)
+            self.hasse_btn.setToolTip("Calculate adjacency matrix and ranks vector for the quiver.\n" \
+                                              "Only valid for unframed (no flavours) unitary quivers.")
+        elif any(d.get("node_type") == "gauge" and d.get("gp_type") != "U" for _, d in self.graph.nodes(data=True)):
+            self.hasse_btn.setEnabled(False)
+            self.hasse_btn.setToolTip("Calculate adjacency matrix and ranks vector for the quiver.\n" \
+                                              "Only valid for unframed (no flavours) unitary quivers.")
+    
+
+
+        # --------------- layout -----------------------------
+        s_lay.addWidget(QLabel("Node colouring:"))
+        colour_mode_row = QWidget()
+        colour_mode_layout = QHBoxLayout(colour_mode_row)
+        colour_mode_layout.setContentsMargins(0, 0, 0, 0)
+        colour_mode_layout.addWidget(self.colour_none_btn)
+        colour_mode_layout.addWidget(self.colour_balance_btn)
+        colour_mode_layout.addWidget(self.colour_group_btn)
+        s_lay.addWidget(colour_mode_row)
+
+        
+        s_lay.addWidget(QLabel(""))
+
+
+        s_lay.addWidget(QLabel("<b>Calculations</b>"))
+        
+        s_lay.addWidget(self.show_adj_btn)
+        self.show_adj_btn.setToolTip("Calculate adjacency matrix and ranks vector for unframed unitary quivers.")
+
+
+
+        s_lay.addWidget(QLabel("Global Symmetry Subgroup:"))
+        symm_row = QWidget()
+        symm_layout = QHBoxLayout(symm_row)
+        symm_layout.setContentsMargins(0, 0, 0, 0)
+        symm_layout.addWidget(self.glob_symm_subgp_C_btn)
+        symm_layout.addWidget(self.glob_symm_subgp_H_btn)
+        s_lay.addWidget(symm_row)
+
+
+        s_lay.addWidget(QLabel("Hilbert Series:"))
+        hs_row = QWidget()
+        hs_layout = QHBoxLayout(hs_row)
+        hs_layout.setContentsMargins(0, 0, 0, 0)
+        hs_layout.addWidget(self.HS_C_btn)
+        hs_layout.addWidget(self.HS_H_btn)
+        s_lay.addWidget(hs_row)
+        
+
+        s_lay.addWidget(QLabel(""))
+        s_lay.addWidget(QLabel("<b>New Quiver</b>"))
+        
+
         s_lay.addWidget(self.combine_btn)
-        s_lay.addWidget(self.color_chk)
-        
-        s_lay.addWidget(self.glob_symm_subgp_C_btn)
-        s_lay.addWidget(self.glob_symm_subgp_H_btn)
 
-        s_lay.addWidget(self.hilbert_series_btn)
+        gauge_ungauge_row = QWidget()
+        gauge_ungauge_layout = QHBoxLayout(gauge_ungauge_row)
+        gauge_ungauge_layout.setContentsMargins(0, 0, 0, 0)
+        gauge_ungauge_layout.addWidget(self.gauge_btn)
+        gauge_ungauge_layout.addWidget(self.ungauge_btn)
+        s_lay.addWidget(gauge_ungauge_row)
+
+
+        s_lay.addWidget(self.linear_mirror_btn)
+
+        s_lay.addWidget(self.hasse_btn)
 
         # --- main layout ---
         central = QWidget(); lay = QHBoxLayout(central)
@@ -258,14 +272,42 @@ class CalculationsWindow(QMainWindow):
         self.setCentralWidget(central); self.resize(800, 500)
 
 
+    def _calc_adjM(self):
+        """
+        Display the adjacency matrix and node ranks vector of the current quiver.
+        Uses QG_to_Mv for matrix and vector extraction.
+        """
+
+        g = self.graph
+        M, ranks = QG_to_Mv(g)
+
+        # Format the adjacency matrix as a readable HTML table
+        matrix_html = "<table border='1' cellspacing='0' cellpadding='2' style='font-family:monospace;font-size:10pt;'>"
+        for row in M.tolist():
+            matrix_html += "<tr>" + "".join(f"<td align='center'>{val}</td>" for val in row) + "</tr>"
+        matrix_html += "</table>"
+
+        # Format the node ranks vector
+        ranks_html = ", ".join(str(r) for r in ranks)
+
+        # Combine into HTML
+        html = (
+            f"<b>Adjacency Matrix:</b>{matrix_html}<br><br>"
+            f"<b>Node Ranks:</b><br>[{ranks_html}]"
+        )
+
+        show_scrollable_message(
+            self,
+            "Adjacency Matrix and Node Ranks",
+            html
+        )
+
+
     def _combine_flavours(self):
         """
         Create a **new** CalculationsWindow in which any gauge node that had
         multiple connected U-flavour nodes is now connected to exactly one
         U-flavour node whose rank is the sum of the originals.
-
-        The current window is closed (its scene is cleared in closeEvent),
-        so the original graph view is discarded.
         """
         new_g = copy.deepcopy(self.graph)           # work on a fresh copy
 
@@ -276,13 +318,13 @@ class CalculationsWindow(QMainWindow):
             if gauge not in new_g:               
                 continue      
             ndata = new_g.nodes[gauge]
-            if ndata.get("flav_gauge") != "gauge":
+            if ndata.get("node_type") != "gauge":
                 continue  # skip non-gauge nodes
 
             # All directly-connected U-flavour neighbours
             u_flavours = [
                 n for n in new_g.neighbors(gauge)
-                if new_g.nodes[n].get("flav_gauge") == "flav"
+                if new_g.nodes[n].get("node_type") == "flav"
                 and new_g.nodes[n].get("gp_type") == "U"
             ]
 
@@ -300,7 +342,7 @@ class CalculationsWindow(QMainWindow):
                 next_id,
                 gp_type="U",
                 gp_rank=total_rank,
-                flav_gauge="flav",
+                node_type="flav",
                 pos=(avg_x, avg_y)
             )
             new_g.add_edge(next_id, gauge)
@@ -328,28 +370,65 @@ class CalculationsWindow(QMainWindow):
         # close—and thereby delete—the current window and its graph
         self.close()
 
-    def _toggle_balance_colours(self, state: int):
+
+    def _colours(self, state: str):
+
+        if state == "none":
+            self.colour_none_btn.setChecked(True)
+            self.colour_balance_btn.setChecked(False)
+            self.colour_group_btn.setChecked(False)
+        elif state == "bal":
+            self.colour_none_btn.setChecked(False)
+            self.colour_balance_btn.setChecked(True)
+            self.colour_group_btn.setChecked(False)
+        elif state == "gp":
+            self.colour_none_btn.setChecked(False)
+            self.colour_balance_btn.setChecked(False)
+            self.colour_group_btn.setChecked(True)
+        
+        self.scene.set_colour_mode(state)
+
         """Re-colour nodes according to balance when box is ticked."""
         for item in self.scene.items():
             nid = item.data(0)
             if nid is None:                       # skip edges / labels
                 continue
-            bal = compute_balance(self.graph, nid)
-            if state and bal is not None:         # colouring ON
-                if bal < 0:
+            
+            if state == 'none':                # colouring OFF
+                colour = Qt.white
+
+            elif state == 'bal':
+                bal = compute_balance(self.graph, nid)
+                if bal is None: #flav
+                    colour = Qt.white
+                elif bal < 0:
                     colour = QColor("#ff9898")    # light red
                 elif bal > 0:
                     colour = QColor("#bebdbd")    # light grey
                 else:
                     colour = Qt.white
-            else:                                 # colouring OFF
-                colour = Qt.white
+            
+            elif state == 'gp':
+                data = self.graph.nodes[nid]
+                gp_type = data.get("gp_type")
+                if gp_type == "U":
+                    colour = Qt.white
+                elif gp_type == "SU":
+                    colour = QColor("#bebdbd")  # light gray
+                elif gp_type == "SO":
+                    colour = QColor("#fd6b6b")  # light red
+                elif gp_type == "USp":
+                    colour = QColor("#5a5aef")  # light blue
+
             item.setBrush(QBrush(colour))
 
 
-
     def _glob_symm_subgp_H(self):
-        gps_dim = -1
+        
+        
+        gps_dim = 0
+
+
 
         # SU from higher multiplicity edges
         edge_mults = []
@@ -358,63 +437,117 @@ class CalculationsWindow(QMainWindow):
             if edge_mult > 1:
                 # only consider edges with multiplicity > 1, since SU(1) is trivial
                 edge_mults.append(edge_mult)
-        glob_symm_subgp_str_e = " × ".join(
-            f"SU({n})^{m}" if m > 1 else f"SU({n})"
-            for n, m in sorted(Counter(edge_mults).items(), reverse=True))
+        
+        e_SUs = []
         for mult in edge_mults:
+            e_SUs.append(("SU",mult))
             gps_dim += mult**2 - 1
 
-        # SU from flav nodes
-        flavs = []
-        for n, d in self.graph.nodes(data=True):
-            if d.get("flav_gauge") == "flav":
-                gp_type = d.get("gp_type", "?")
-                gp_rank = d.get("gp_rank", "?")
-                if gp_type == "U":
-                    flavs.append(gp_rank)
-                    gps_dim += gp_rank**2
-                else:
-                    QMessageBox.warning(self, "No Subgroup Found", "Currently, Higgs global symmetry subgroup calculation is only implemented for unitary flavour nodes.")
-                    return
-                    
-        flavs = sorted(flavs, reverse=True)
+        glob_symm_subgp_str_e = " × ".join(
+            f"SU({n})^{m}" if m > 1 else f"SU({n})"
+            for n, m in sorted(Counter(edge_mults).items(), reverse=True)) + " × "
 
-        if not flavs:
-            QMessageBox.warning(self, "No Subgroup Found", "No flavour nodes found.")
-            return
-        else:
-            counts = Counter(flavs)
-            glob_symm_subgp_str_f = " × ".join(
-                f"U({n})^{m}" if m > 1 else f"U({n})"
-                for n, m in sorted(counts.items(), reverse=True))
-            
-            
-            
-            if 1 in flavs:
-                glob_symm_subgp_str_f_rem_U1 = " × ".join(f"U({n})^{m}" if m > 1 else f"U({n})" for n, m in sorted(Counter(flavs[:-1]).items(), reverse=True))
-                if not glob_symm_subgp_str_f_rem_U1:
-                    if edge_mults == []:
-                        glob_symm_subgp_str_f_rem_U1 = r"trivial group"
+
+
+        gauge_nodes = [d for n, d in self.graph.nodes(data=True) if d.get("node_type") == "gauge"]
+        nodes = [d for n, d in self.graph.nodes(data=True)]
+
+        # all U gauge and flav
+        if all(d.get("gp_type") == "U" for d in nodes):
+
+            gps_dim -= 1 # gauge U(1)
+
+            flavs = []
+            for n, d in self.graph.nodes(data=True):
+                if d.get("node_type") == "flav":
+                    gp_type = d.get("gp_type", "?")
+                    gp_rank = d.get("gp_rank", "?")
+                    if gp_type == "U":
+                        flavs.append((gp_type,gp_rank))
+                        gps_dim += gp_rank**2
                     else:
-                        glob_symm_subgp_str_f_rem_U1 = glob_symm_subgp_str_f_rem_U1[:-3]  # remove trailing " × " 
-                output_str = (
-                    f"{glob_symm_subgp_str_e} × S(  {glob_symm_subgp_str_f}  )\n"
-                    f"≅ {glob_symm_subgp_str_e} × {glob_symm_subgp_str_f} / U(1)\n"
-                    f"≅ {glob_symm_subgp_str_e} × {glob_symm_subgp_str_f_rem_U1}\n\n"
-                    f"Dimension: {gps_dim}"
-                )
+                        QMessageBox.warning(self, "No Subgroup Found", "Higgs global symmetry subgroup calculation is not implemented for this quiver.")
+                        return
+            
+            flav_ranks = sorted([n[1] for n in flavs], reverse=True)
 
+            if not flavs:
+                QMessageBox.warning(self, "No Subgroup Found", "No flavour nodes found.")
+                return
             else:
-                output_str = (
-                    f"{glob_symm_subgp_str_e} × S(  {glob_symm_subgp_str_f}  )\n"
-                    f"≅ {glob_symm_subgp_str_e} × {glob_symm_subgp_str_f} / U(1)\n\n"
-                    f"Dimension: {gps_dim}"
-                )
+                counts = Counter(flav_ranks)
+                glob_symm_subgp_str_f = " × ".join(
+                    f"U({n})^{m}" if m > 1 else f"U({n})"
+                    for n, m in sorted(counts.items(), reverse=True))
+                
+                if 1 in flav_ranks:
+                    glob_symm_subgp_str_f_rem_U1 = " × ".join(f"U({n})^{m}" if m > 1 else f"U({n})" for n, m in sorted(Counter(flav_ranks[:-1]).items(), reverse=True))
+                    if not glob_symm_subgp_str_f_rem_U1:
+                        if edge_mults == []:
+                            glob_symm_subgp_str_f_rem_U1 = r"trivial group"
+                        else:
+                            glob_symm_subgp_str_f_rem_U1 = glob_symm_subgp_str_f_rem_U1[:-3]  # remove trailing " × " 
+                    output_str = (
+                        f"{glob_symm_subgp_str_e}S(  {glob_symm_subgp_str_f}  )\n"
+                        f"≅ {glob_symm_subgp_str_e}{glob_symm_subgp_str_f} / U(1)\n"
+                        f"≅ {glob_symm_subgp_str_e}{glob_symm_subgp_str_f_rem_U1}\n\n"
+                        f"Dimension: {gps_dim}"
+                    )
 
-            show_scrollable_message(self, "Higgs Global Symmetry Subgroup", output_str)
+                else:
+                    output_str = (
+                        f"{glob_symm_subgp_str_e}S(  {glob_symm_subgp_str_f}  )\n"
+                        f"≅ {glob_symm_subgp_str_e}{glob_symm_subgp_str_f} / U(1)\n\n"
+                        f"Dimension: {gps_dim}"
+                    )
+
+        # orthosymplectic
+        elif all(d.get("gp_type") in ("SO","USp") for d in nodes):
+            flavs = e_SUs
+            for n, d in self.graph.nodes(data=True):
+                if d.get("node_type") == "flav":
+                    gp_type = d.get("gp_type", "?")
+                    gp_rank = d.get("gp_rank", "?")
+                    if gp_type in ("SO","USp"):
+                        flavs.append((gp_type,gp_rank))
+                    elif gp_type in ("U","SU"):
+                        QMessageBox.warning(self, "No Subgroup Found", "Higgs global symmetry subgroup calculation is not implemented for unitary-orthosymplectic quivers.")
+                        return
+                    
+            priority = {"SU": 0, "SO": 1, "USp": 2}
+            flavs.sort(key=lambda x: (priority.get(x[0], 99), -x[1]))
+            
+            gps_str = []
+            gps_dim = 0
+            for gp in flavs:
+                gp_type = gp[0]
+                gp_rank = gp[1]
+                if gp_type == "SO":
+                    gps_str.append(f"SO({gp_rank})")
+                    gps_dim += gp_rank * (gp_rank - 1) / 2
+                elif gp_type == "USp":
+                    gps_str.append(f"USp({gp_rank})")
+                    gps_dim += gp_rank * (gp_rank + 1) / 2
+            
+            counts = Counter(gps_str)
+            seen = set()
+            flavs_str_combine = " × ".join(
+                f"{g}^{counts[g]}" if counts[g] > 1 else g
+                for g in gps_str if not (g in seen or seen.add(g))
+            )
+            
+            output_str = (
+                        f"{flavs_str_combine}\n\n"
+                        f"Dimension: {gps_dim}"
+                    )
+            
+        elif any(d.get("gp_type") in ("SO","USp") for d in nodes) and any(d.get("gp_type") in ("U","SU") for d in nodes):
+            QMessageBox.warning(self, "No Subgroup Found", "Higgs global symmetry subgroup calculation is not implemented for unitary-orthosymplectic quivers.")
             return
 
 
+        show_scrollable_message(self, "Higgs Global Symmetry Subgroup", output_str)
+        return
 
 
     def _glob_symm_subgp_C(self):
@@ -424,7 +557,7 @@ class CalculationsWindow(QMainWindow):
         G_removed_overb = copy.deepcopy(self.graph)
     
         for n, d in self.graph.nodes(data=True):
-            if d.get("flav_gauge") == "gauge":
+            if d.get("node_type") == "gauge":
                 gp_type = d.get("gp_type", "?")
                 gp_rank = d.get("gp_rank", "?")
                 gp_bal = compute_balance(self.graph, n)
@@ -444,7 +577,7 @@ class CalculationsWindow(QMainWindow):
                     G_removed_overb.remove_node(n)
                 elif gp_type == "SU" and gp_bal > 0:
                     G_removed_overb.remove_node(n)
-            elif d.get("flav_gauge") == "flav":
+            elif d.get("node_type") == "flav":
                     G_removed_overb.remove_node(n)  
 
         G_removed_overb = nx.Graph(G_removed_overb) # not multigraph
@@ -519,7 +652,7 @@ class CalculationsWindow(QMainWindow):
         new_g = copy.deepcopy(self.graph)  # work on a fresh copy
 
         # Find all flavour nodes
-        flavour_nodes = [n for n, d in new_g.nodes(data=True) if d.get("flav_gauge") == "flav"]
+        flavour_nodes = [n for n, d in new_g.nodes(data=True) if d.get("node_type") == "flav"]
         if not flavour_nodes:
             QMessageBox.warning(self, "No Flavour Nodes", "There are no flavour nodes to gauge.")
             return
@@ -532,7 +665,7 @@ class CalculationsWindow(QMainWindow):
 
         # ----- 1. create a new U(1) gauge node -----
         new_U1 = max(new_g.nodes, default=-1) + 1
-        new_g.add_node(new_U1, gp_type="U", flav_gauge="gauge")
+        new_g.add_node(new_U1, gp_type="U", gp_rank=1, node_type="gauge")
 
         # ----- connect all previous flavour nodes to the new U(1) gauge node -----
         # Edge multiplicity is rank of corresponding previous flavour node
@@ -542,7 +675,7 @@ class CalculationsWindow(QMainWindow):
             for _ in range(flav_rank):
                 new_g.add_edge(new_U1, neighbour)
 
-        # ----- remove flav_gauge flag from previous flavour nodes -----
+        # ----- remove node_type flag from previous flavour nodes -----
         for flav in flavour_nodes:
             new_g.remove_node(flav)
 
@@ -554,16 +687,15 @@ class CalculationsWindow(QMainWindow):
         self.close()
         
         
-
     def _ungauge(self):
         # Check if there are any flavour nodes
-        flavour_nodes = [n for n, d in self.graph.nodes(data=True) if d.get("flav_gauge") == "flav"]
+        flavour_nodes = [n for n, d in self.graph.nodes(data=True) if d.get("node_type") == "flav"]
         if bool(flavour_nodes):  # unframed/flavourless quiver
             QMessageBox.warning(self, "Unframed Quiver", "Ungauging is only valid for unframed/flavourless quivers.")
             return
 
         # Check if there is a U(1) gauge node
-        u1_gauge_nodes = [n for n, d in self.graph.nodes(data=True) if d.get("flav_gauge") == "gauge" and d.get("gp_type") == "U" and d.get("gp_rank") == 1]
+        u1_gauge_nodes = [n for n, d in self.graph.nodes(data=True) if d.get("node_type") == "gauge" and d.get("gp_type") == "U" and d.get("gp_rank") == 1]
         if not u1_gauge_nodes:  # no U(1) gauge node
             QMessageBox.warning(self, "No U(1) Gauge Node",
                                 "Currently, ungauging is only supported for U(1) gauge nodes." \
@@ -624,7 +756,7 @@ class CalculationsWindow(QMainWindow):
                         flav_id,
                         gp_type="U",
                         gp_rank=edge_mult,
-                        flav_gauge="flav"
+                        node_type="flav"
                     )
                     new_g.add_edge(flav_id, n)
                 new_g.remove_node(nid)
@@ -641,14 +773,13 @@ class CalculationsWindow(QMainWindow):
                     "Click a U(1) gauge node to ungauge it.\n"
                     "Valid nodes are highlighted on hover.")
     
-    
 
     def _HS_C(self):
         gg, ok = QInputDialog.getInt(
             self, "Hilbert Series Cutoff",
             "Enter cutoff for Hilbert series computation.\nSeries will be calculated up to order double of cutoff selected.\n"
-            "(WARNING: Computation time scales exponentially with calculation order, number of nodes and group rank.)",
-            value=5, minValue=1, maxValue=20
+            "(NOTE: Computation time scales exponentially with calculation order, number of nodes and group rank.)",
+            value=5, minValue=1, maxValue=21
             )
         if not ok:
             return
@@ -662,14 +793,160 @@ class CalculationsWindow(QMainWindow):
         elapsed = time.time() - start_time
 
         HS_str = str(HS).replace("**", "^")
+        HS_str = HS_str.replace("*", "")
 
         output_str = HS_str
         show_scrollable_message(self,
-                                f"Hilbert Series of Coulomb branch (Calculation time: {elapsed:.2f} secs)",
+                                f"Coulomb branch Hilbert Series (Calculation time: {elapsed:.2f} secs)",
                                 output_str
                                 )
         return
 
+
+    def _linear_3d_mirror(self):
+        # Extract gauge nodes in order (linear quiver: path)
+        # Each gauge node is U or SU, each may have at most one U-flavour attached
+        # Return: [flavour_ranks], [gauge_ranks], [gauge_types]
+
+        # 1. Find the ordered list of gauge nodes along the path
+        # Only nodes of type "gauge"
+        gauge_nodes = [n for n, d in self.graph.nodes(data=True) if d.get("node_type") == "gauge"]
+
+        if len(gauge_nodes) > 1:
+            gauge_subgraph = self.graph.subgraph(gauge_nodes)
+            endpoints = [n for n in gauge_subgraph.nodes if gauge_subgraph.degree(n) == 1]
+            path = []
+            visited = set()
+            current = endpoints[0]
+            prev = None
+            while True:
+                path.append(current)
+                visited.add(current)
+                neighbors = [n for n in gauge_subgraph.neighbors(current) if n != prev]
+                if not neighbors:
+                    break
+                prev, current = current, neighbors[0]
+        elif len(gauge_nodes) == 1:
+            path = [gauge_nodes[0]]
+
+        gauge_ranks = []
+        gauge_types = []
+        flav_ranks = []
+        for gauge_node in path:
+
+            d = self.graph.nodes[gauge_node]
+            gauge_ranks.append(d.get("gp_rank"))
+            gauge_types.append("u" if d.get("gp_type") == "U" else "s" if d.get("gp_type") == "SU" else "unknown")
+            
+            # Find attached U-flavour (node_type=="flav", gp_type=="U")
+            flav = None
+            for n in self.graph.neighbors(gauge_node):
+                
+                nd = self.graph.nodes[n]
+                if nd.get("node_type") == "flav" and nd.get("gp_type") == "U":
+                    
+                    if flav is not None:
+                        raise RuntimeError(f"Gauge node {gauge_node} has more than one attached U-flavour node.")
+
+                    flav = nd.get("gp_rank")
+                    
+            flav_ranks.append(flav if flav is not None else 0)
+
+        
+        mq = MagneticQuiver(flav_ranks, gauge_ranks, gauge_types)
+        
+        class MagneticQuiverResultsDialog(QDialog):
+            def __init__(self, results, parent=None):
+                super().__init__(parent)
+                self.setWindowTitle(f"{len(results)} Magnetic Quiver{'s' if len(results) > 1 else ''} Found")
+                self.selected_quiver = None 
+
+                layout = QVBoxLayout(self)
+                scroll = QScrollArea()
+                scroll.setWidgetResizable(True)
+                container = QWidget()
+                vbox = QVBoxLayout(container)
+
+                for idx, (bl, Q, M, ranks) in enumerate(results):
+                    group = QWidget()
+                    group_layout = QHBoxLayout(group)
+
+                    open_btn = QPushButton("Open")
+                    open_btn.clicked.connect(lambda _, q=Q: self.open_quiver(q))
+                    group_layout.addWidget(open_btn)
+
+                    quiver_view = QGraphicsView(_StaticScene(Q, parent=self))
+                    quiver_view.setRenderHint(QPainter.Antialiasing)
+                    quiver_view.setMinimumWidth(220)
+                    quiver_view.setMinimumHeight(180)
+                    group_layout.addWidget(quiver_view)
+
+                    # Format the adjacency matrix as a readable HTML table
+                    matrix_html = "<table border='1' cellspacing='0' cellpadding='2' style='font-family:monospace;font-size:10pt;'>"
+                    for row in M.tolist():
+                        matrix_html += "<tr>" + "".join(f"<td align='center'>{val}</td>" for val in row) + "</tr>"
+                    matrix_html += "</table>"
+                    
+                    info = QLabel(
+                        f"<b>Brane locking:<br></b> {bl}<br><br>"
+                        f"<b>Node Ranks:<br></b> {ranks}<br><br>"
+                        f"<b>Adjacency Matrix:</b><br>{matrix_html}"
+                    )
+                    info.setTextFormat(Qt.RichText)
+
+                    group_layout.addWidget(info)
+                    vbox.addWidget(group)
+                container.setLayout(vbox)
+                scroll.setWidget(container)
+                layout.addWidget(scroll)
+
+
+            def open_quiver(self, quiver_graph):
+                main_win = self.parent().parent()  # MainWindow
+                new_win = CalculationsWindow(quiver_graph, parent=main_win)
+                main_win._calc_win = new_win
+                new_win.show()
+                self.accept()
+                self.parent().close()
+
+
+        results = list(mq.magnetic_quivers_full())
+        if not results:
+            QMessageBox.information(self, "No Magnetic Quivers", "No valid magnetic quivers found.")
+            return
+
+        dlg = MagneticQuiverResultsDialog(results, parent=self)
+        dlg.exec()
+
+
+    def _hasse(self):
+        class HasseDiagramDialog(QDialog):
+            def __init__(self, full_qg, M, all_leaves, hasse_mult, idx2node, parent=None):
+                super().__init__(parent)
+                self.setWindowTitle(f"Hasse Diagram: {len(all_leaves)} Leaves [double click quiver to open new Calculations Window]")
+                layout = QVBoxLayout(self)
+                view = HasseDiagramView(full_qg, M, all_leaves, hasse_mult, idx2node, parent=self, open_quiver_callback=self._open_quiver)
+                layout.addWidget(view)
+                
+            def _open_quiver(self, quiver_graph):
+                main_win = self.parent().parent()  # MainWindow
+                new_win = CalculationsWindow(quiver_graph, parent=main_win)
+                main_win._calc_win = new_win
+                new_win.show()
+                self.accept()
+                self.parent().close()
+
+        # NEW: fission_decay returns 5 values
+        M, ranks, idx2node, all_leaves, hasse_mult = fission_decay(self.graph)
+
+        dlg = HasseDiagramDialog(self.graph, M, all_leaves, hasse_mult, idx2node, parent=self)
+
+        dlg.exec()
+
+
+
+  
+    
 
     @staticmethod
     def _not_implemented():

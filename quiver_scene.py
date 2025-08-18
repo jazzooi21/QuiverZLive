@@ -29,8 +29,8 @@ class QuiverScene(QGraphicsScene):
 
         self.graph              = QuiverGraph()
         self.edge_items         = {}
-        self.current_node_type  = "gauge"        # default (gauge or flavour)
-        self.mode               = "cursor"       # default (interaction mode: "cursor" or "add")
+        self.current_node_type  = "gauge"        # default ("gauge" or "flav")
+        self.mode               = "add"       # default (interaction mode: "cursor" or "add")
         self._dragged_node      = None
         self._drag_offset       = None
         self._dragged_node_edges = []
@@ -43,7 +43,6 @@ class QuiverScene(QGraphicsScene):
     # --------------------------- public setters ------------------------------
 
     def set_node_type(self, node_type: str):
-        """Called by the main window to switch between 'gauge' / 'flavour'."""
         self.current_node_type = node_type
     
     def set_interaction_mode(self, mode: str):
@@ -140,11 +139,13 @@ class QuiverScene(QGraphicsScene):
         rect = self._dragged_node.rect()
         self._dragged_node.setPos(grid_x - rect.center().x(),
                                 grid_y - rect.center().y())
+        
 
-        # 1) update graph metadata
-        self.graph.nodes[node_id]["pos"] = (grid_x, grid_y)
+        # Update node position in the graph model
+        self.graph.nodes[node_id]['x'] = grid_x
+        self.graph.nodes[node_id]['y'] = grid_y
 
-        # 2) _redraw_edges_between will remove & re‐add all edges for a given pair—
+        #  _redraw_edges_between will remove & re‐add all edges for a given pair —
         #    so just call it for every neighbor of the dragged node
         for neighbor in self.graph.neighbors(node_id):
             self._redraw_edges_between(node_id, neighbor)
@@ -169,7 +170,7 @@ class QuiverScene(QGraphicsScene):
             self._drag_line = self._drag_start_node = None
 
     # --------------------- node / edge creation helpers ---------------------
-
+    
     def _add_node_at_grid(self, pos):
         gx = round(pos.x() / GRID_SCALE) * GRID_SCALE
         gy = round(pos.y() / GRID_SCALE) * GRID_SCALE
@@ -204,7 +205,7 @@ class QuiverScene(QGraphicsScene):
         main_window = self._get_main_window()
         gp_type   = main_window.group_type_combo.currentText()
         gp_rank   = int(main_window.group_number_combo.currentText())
-        label_txt = f"{gp_rank}" if (gp_type == "U" and self.current_node_type == "flavour") else f"{gp_type}({gp_rank})"
+        label_txt = f"{gp_rank}" if (gp_type == "U" and self.current_node_type == "flav") else f"{gp_type}({gp_rank})"
 
         label = QGraphicsTextItem(label_txt, shape)  # Make label a child of the node
         label.setDefaultTextColor(Qt.black)
@@ -225,10 +226,11 @@ class QuiverScene(QGraphicsScene):
             node_id,
             gp_type=gp_type,
             gp_rank=gp_rank,
-            flav_gauge=self.current_node_type,
+            node_type=self.current_node_type
         )
-        # keep the *current* grid position as an attribute—not the node key
-        self.graph.nodes[node_id]["pos"] = (x, y)
+
+        self.graph.nodes[node_id]['x'] = x
+        self.graph.nodes[node_id]['y'] = y
 
         shape.setFlag(QGraphicsItem.ItemIsSelectable)
 
@@ -240,7 +242,7 @@ class QuiverScene(QGraphicsScene):
         self.graph.add_quiver_edge(uid, vid)
 
         # Rebuild all edges for this pair
-        self._redraw_edges_between(uid, vid)
+        self._redraw_edges_between(uid, vid)    
 
 
     def _redraw_edges_between(self, u, v):
@@ -273,7 +275,7 @@ class QuiverScene(QGraphicsScene):
 
         # Total edges
         total = self.graph.number_of_edges(u, v)
-        spacing = 12 if total in [1, 2] else 32 / total
+        spacing = 12 if total in [0, 1, 2] else 32 / total
 
         # Draw each edge with updated offset
         for idx in range(total):
