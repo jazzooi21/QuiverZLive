@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./quiverzlive/icons/logo.png" alt="logo" width="100"/>
+</p>
+
 **QuiverZLive** is an interactive tool for working with quivers.
 
 Current features include:
@@ -34,6 +38,7 @@ To install from source, you need `Python (>= 3.9)` and `pip`. If you have those,
     pip install .
 
 Then, you can run **QuiverZLive** by typing `qvzl`, `quiverzlive` or `QuiverZLive`.
+
 
 
 
