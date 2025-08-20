@@ -11,9 +11,14 @@ if os.name == 'nt':
     myappid = 'qvz.0.0.1' # arbitrary string
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)  # type: ignore
 
-def resource_path(rel):
-    base = getattr(sys, "_MEIPASS", os.path.abspath("."))
-    return os.path.join(base, rel)
+def resource_path(rel: str) -> str:
+    # PyInstaller support
+    if hasattr(sys, "_MEIPASS"):
+        base = Path(sys._MEIPASS)
+    else:
+        # directory where this file lives
+        base = Path(__file__).resolve().parent
+    return str(base / rel)
 
 
 
@@ -46,4 +51,5 @@ def main() -> None:
     sys.exit(app.exec())
 
 if __name__ == "__main__":   # `python -m quiverzlive.app`
+
     main()
