@@ -29,7 +29,7 @@ class InstantTooltipStyle(QProxyStyle):
 def main() -> None:
     app = QApplication(sys.argv)
 
-    app.setWindowIcon(QIcon(resource_path("logo.ico")))
+    app.setWindowIcon(QIcon(resource_path("quiverzlive/logo.ico")))
 
     app.setStyle(InstantTooltipStyle())
 
@@ -37,7 +37,7 @@ def main() -> None:
     win = MainWindow()
 
     try:
-        win.setWindowIcon(QIcon(resource_path("logo.ico")))
+        win.setWindowIcon(QIcon(resource_path("quiverzlive/logo.ico")))
     except Exception:
         pass
 
@@ -47,6 +47,7 @@ def main() -> None:
 if __name__ == "__main__":   # `python -m quiverzlive.app`
 
     main()
+
 
 
 
