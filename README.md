@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./quiverzlive/icons/logo.png" alt="logo" width="100"/>
+</p>
+
 **QuiverZLive** is an interactive tool for working with quivers.
 
 ## Installation instructions
