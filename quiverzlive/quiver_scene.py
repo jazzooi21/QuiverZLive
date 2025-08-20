@@ -207,7 +207,7 @@ class QuiverScene(QGraphicsScene):
         gp_rank   = int(main_window.group_number_combo.currentText())
         label_txt = f"{gp_rank}" if (gp_type == "U" and self.current_node_type == "flav") else f"{gp_type}({gp_rank})"
 
-        label = QGraphicsTextItem(label_txt, shape)  # Make label a child of the node
+        label = QGraphicsTextItem(label_txt)
         label.setDefaultTextColor(Qt.black)
         label.setZValue(2)
         # Position label at the center of the node using local coordinates
@@ -217,6 +217,7 @@ class QuiverScene(QGraphicsScene):
             shape.rect().center().y() - label_rect.height() / 2
         )
         self.addItem(label)
+        label.setParentItem(shape)
 
         # ---- graph model ----
         node_id = self._next_id

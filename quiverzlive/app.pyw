@@ -1,8 +1,8 @@
 import sys, os
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QProxyStyle, QStyle
-from .window_main import MainWindow
 
+from .window_main import MainWindow
 
 # The following hack is needed on windows in order to show the icon in the taskbar
 # See https://stackoverflow.com/questions/1551605/how-to-set-applications-taskbar-icon-in-windows-7/1552105#1552105
@@ -29,7 +29,7 @@ class InstantTooltipStyle(QProxyStyle):
 def main() -> None:
     app = QApplication(sys.argv)
 
-    app.setWindowIcon(QIcon(resource_path("quiverzlive/logo.ico")))
+    app.setWindowIcon(QIcon(resource_path("quiverzlive/icons/logo.ico")))
 
     app.setStyle(InstantTooltipStyle())
 
@@ -37,7 +37,7 @@ def main() -> None:
     win = MainWindow()
 
     try:
-        win.setWindowIcon(QIcon(resource_path("quiverzlive/logo.ico")))
+        win.setWindowIcon(QIcon(resource_path("quiverzlive/icons/logo.ico")))
     except Exception:
         pass
 
@@ -45,11 +45,4 @@ def main() -> None:
     sys.exit(app.exec())
 
 if __name__ == "__main__":   # `python -m quiverzlive.app`
-
     main()
-
-
-
-
-
-
