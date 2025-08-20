@@ -12,7 +12,7 @@ Quivers are a central tool in modern mathematical physics, encoding gauge theori
 #### Download from `github`
 Download and the `.zip` and unpack directory. 
 
-If dependencies are installed (	`PySide6`, `numpy`, `sympy` and `networkx` --- see `requirements.txt`), the application can be run with `run QuiverZLive.bat`.
+If dependencies are installed (`PySide6`, `numpy`, `sympy` and `networkx` --- see `requirements.txt`), the application can be run with `run QuiverZLive.bat`.
 
 If desired, a shortcut (desktop or otherwise) to the `.bat` file can be created for easier access.
 
