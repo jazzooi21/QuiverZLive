@@ -1,17 +1,18 @@
 from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                                QLabel, QPushButton, QComboBox, QGraphicsView,
                                QMessageBox,
-                               QGraphicsEllipseItem, QGraphicsRectItem, QGraphicsLineItem)
+                               QGraphicsEllipseItem, QGraphicsRectItem, QGraphicsLineItem,
+                               QDialog, QDialogButtonBox, QFormLayout, QLineEdit)
 from PySide6.QtGui import QPainter
 from PySide6.QtCore import Qt
 
-from quiver_scene import QuiverScene
-from window_calculations import CalculationsWindow
-
 import networkx as nx
 import re
-from PySide6.QtWidgets import QDialog, QDialogButtonBox, QFormLayout, QLineEdit
 import inspect
+
+from .quiver_scene import QuiverScene
+from .window_calculations import CalculationsWindow
+
 
 
 class MainWindow(QMainWindow):

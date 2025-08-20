@@ -5,9 +5,9 @@ from PySide6.QtWidgets import QGraphicsScene
 from PySide6.QtGui    import QPen, QBrush, QColor, QPainter
 from PySide6.QtCore   import QRectF, Qt, QLineF
 
-from constants import NODE_RADIUS, PEN_NODE, SCENE_WIDTH, SCENE_HEIGHT
-from graph_model import QuiverGraph, compute_balance
-from nx_layouts import plot_caterpillar, plot_sunshine, plot_sunshine_multicycles
+from .constants import NODE_RADIUS, PEN_NODE, SCENE_WIDTH, SCENE_HEIGHT
+from .graph_model import QuiverGraph, compute_balance
+from .nx_layouts import plot_caterpillar, plot_sunshine, plot_sunshine_multicycles
 
 class _StaticScene(QGraphicsScene):
     """Draws the graph once; mouse & key events are ignored."""

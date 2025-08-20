@@ -5,30 +5,28 @@ from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
 from PySide6.QtGui    import QPen, QBrush, QColor, QPainter
 from PySide6.QtCore   import QRectF, Qt, QLineF
 
-
-
-from constants import NODE_RADIUS, PEN_NODE, SCENE_WIDTH, SCENE_HEIGHT
-
-from Qt_zoomable_view import ZoomableGraphicsView
-from window_hasse import HasseDiagramView
-from static_scene import _StaticScene
-
-from graph_model import QuiverGraph, compute_balance, mixU_linear, QG_to_Mv, Mv_to_QG
-from nx_dynkin import Dynkin_A, Dynkin_D, Dynkin_E
-from nx_layouts import plot_caterpillar, plot_sunshine, plot_sunshine_multicycles
-from Qt_custom_boxes import show_scrollable_message, show_warning_with_link
-
-
-from calc_HS_C import hilbert_series_from_quiver_graph
-from calc_linearmirror import MagneticQuiver
-from calc_hasse import fission_decay
-
-
 import networkx as nx
 import copy
 from collections import Counter
 import time
 import numpy as np
+
+from .constants import NODE_RADIUS, PEN_NODE, SCENE_WIDTH, SCENE_HEIGHT
+
+from .Qt_zoomable_view import ZoomableGraphicsView
+from .window_hasse import HasseDiagramView
+from .static_scene import _StaticScene
+
+from .graph_model import QuiverGraph, compute_balance, mixU_linear, QG_to_Mv, Mv_to_QG
+from .nx_dynkin import Dynkin_A, Dynkin_D, Dynkin_E
+from .nx_layouts import plot_caterpillar, plot_sunshine, plot_sunshine_multicycles
+from .Qt_custom_boxes import show_scrollable_message, show_warning_with_link
+
+
+from .calc_HS_C import hilbert_series_from_quiver_graph
+from .calc_linearmirror import MagneticQuiver
+from .calc_hasse import fission_decay
+
 
 
 

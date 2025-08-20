@@ -1,4 +1,4 @@
-from QuiverZLive import app
+from quiverzlive import app
 
 if __name__ == '__main__':
     app.main()

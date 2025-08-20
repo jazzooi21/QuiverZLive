@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import Dict, List, Optional, Tuple
+import numpy as np
 
 from PySide6.QtCore import Qt, QPointF, QRectF, QMarginsF, QTimer
 from PySide6.QtGui import QPainter, QPen, QBrush, QImage, QPixmap, QPainterPath, QFont, QFontMetrics, QColor, QTransform
@@ -7,10 +8,8 @@ from PySide6.QtWidgets import (QGraphicsView, QGraphicsScene, QGraphicsPixmapIte
                                 QDialog, QVBoxLayout, QScrollArea, QWidget, QHBoxLayout,
                                     QPushButton, QLabel)
 
-import numpy as np
-
-from static_scene import _StaticScene
-from graph_model import QuiverGraph, is_isomorphic
+from .static_scene import _StaticScene
+from .graph_model import QuiverGraph, is_isomorphic
 
 def compute_base_pos(full_qg: QuiverGraph) -> Dict[int, Tuple[float, float]]:
     """

@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-from graph_model import QuiverGraph, QG_to_Mv, QG_to_Mv_idx
+from .graph_model import QuiverGraph, QG_to_Mv, QG_to_Mv_idx
 
 from typing import List, Tuple, Iterable, Sequence, Union, Optional, Dict
 from collections import Counter

@@ -3,7 +3,7 @@ from PySide6.QtWidgets import (QVBoxLayout,
                                QMessageBox, QDialog, QTextEdit)
 from PySide6.QtCore   import Qt
 
-from constants import SCENE_WIDTH, SCENE_HEIGHT
+from .constants import SCENE_WIDTH, SCENE_HEIGHT
 
 def show_scrollable_message(self, title: str, message: str, font_size: int = 24):
     dialog = QDialog(self)

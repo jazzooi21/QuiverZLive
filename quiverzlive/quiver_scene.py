@@ -9,9 +9,9 @@ from PySide6.QtWidgets import (QGraphicsScene, QGraphicsEllipseItem,
 from PySide6.QtGui import QPainter, QPen, QBrush, QColor, QMouseEvent, QTransform
 from PySide6.QtCore import QRectF, QLineF, Qt
 
-from constants import (GRID_SCALE, NODE_RADIUS, SCENE_WIDTH, SCENE_HEIGHT,
+from .constants import (GRID_SCALE, NODE_RADIUS, SCENE_WIDTH, SCENE_HEIGHT,
                         PEN_GRID_THIN, PEN_GRID_THICK, PEN_NODE)
-from graph_model import QuiverGraph
+from .graph_model import QuiverGraph
 
 
 

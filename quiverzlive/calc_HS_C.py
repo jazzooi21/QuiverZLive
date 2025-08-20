@@ -3,7 +3,7 @@ import functools
 from typing import Dict, Iterable, Tuple, Optional
 import sympy as sp
 import networkx as nx
-from graph_model import QuiverGraph
+from .graph_model import QuiverGraph
 from PySide6.QtWidgets import QMessageBox
 
 # ----------------- Monopole-formula primitives (unitary) -----------------

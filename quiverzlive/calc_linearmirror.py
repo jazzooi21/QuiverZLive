@@ -11,7 +11,7 @@ from typing import List, Sequence, Tuple, Generator
 
 import numpy as np
 
-from graph_model import QuiverGraph, Mv_to_QG, QG_to_Mv
+from .graph_model import QuiverGraph, Mv_to_QG, QG_to_Mv
 
 # ────────────────────────── partition helpers ───────────────────────────
 
