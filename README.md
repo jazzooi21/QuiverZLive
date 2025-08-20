@@ -64,7 +64,7 @@ Then, you can run **QuiverZLive** by typing `qvzl`, `quiverzlive` or `QuiverZLiv
 - `window_hasse.py`: Hasse diagram panel
 
 #### UI
-- `Qt_custom_boxes.py`
+- `Qt_custom_boxes.py`: custom message and warning boxes
 - `Qt_zoomable_view.py`: zoomable quiver view (quiver calculation window)
 
 #### Graph Logic
