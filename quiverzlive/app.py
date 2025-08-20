@@ -3,6 +3,8 @@ from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QProxyStyle, QStyle
 from window_main import MainWindow
 
+from pathlib import Path
+
 # The following hack is needed on windows in order to show the icon in the taskbar
 # See https://stackoverflow.com/questions/1551605/how-to-set-applications-taskbar-icon-in-windows-7/1552105#1552105
 if os.name == 'nt':
@@ -11,7 +13,8 @@ if os.name == 'nt':
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)  # type: ignore
 
 def resource_path(rel):
-    base = getattr(sys, "_MEIPASS", os.path.abspath("."))
+    #base = getattr(sys, "_MEIPASS", os.path.abspath("."))
+    base = Path(__file__).resolve().parent
     return os.path.join(base, rel)
 
 
@@ -46,5 +49,6 @@ def main() -> None:
 if __name__ == "__main__":   # `python -m quiverzlive.app`
 
     main()
+
 
 
