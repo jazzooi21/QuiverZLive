@@ -37,6 +37,9 @@ packages = [
     "quiverzlive"
 ]
 
+[tool.setuptools.package-data]
+quiverzlive = ["*.ico", "*.png"]
+
 [project.scripts]
 QuiverZLive = "quiverzlive.app:main"
 quiverzlive = "quiverzlive.app:main"
