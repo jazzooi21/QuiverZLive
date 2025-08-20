@@ -11,11 +11,15 @@
 - Adjacency matrix calculations
 	+ Unframed unitary quivers
 - Global symmetry subgroup
-	+ Coulomb branch: Mixed unitary gauge groups
-	+ Higgs branch: Unitary and orthosymplectic quivers
+	+ Coulomb branch:\
+	  Mixed unitary gauge groups
+	+ Higgs branch:\
+	  Unitary and orthosymplectic quivers
 - Hilbert series
-	+ Coulomb branch: Mixed unitary quivers
-	+ Higgs branch: (not implemented)
+	+ Coulomb branch:\
+	  Mixed unitary quivers
+	+ Higgs branch:\
+	  (not implemented)
 
 #### Quiver Manipulations:
 
