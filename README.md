@@ -4,7 +4,9 @@
 
 **QuiverZLive** is an interactive tool for working with quivers.
 
-Current features include:
+## Features
+
+#### Calculation
 
 - Adjacency matrix calculations
 	+ Unframed unitary quivers
@@ -15,12 +17,14 @@ Current features include:
 	+ Coulomb branch: Mixed unitary quivers
 	+ Higgs branch: (not implemented)
 
+#### Quiver Manipulation
 - Gauge/ungauge quiver
 - Find 3d mirror
 	+ Linear mixed unitary quivers
 - Hasse diagram
 	+ Unframed unitary quivers
 
+---
 ## Installation instructions
 
 #### Download `.zip` folder from `github`
@@ -38,7 +42,6 @@ To install from source, you need `Python (>= 3.9)` and `pip`. If you have those,
     pip install .
 
 Then, you can run **QuiverZLive** by typing `qvzl`, `quiverzlive` or `QuiverZLive`.
-
 
 
 
