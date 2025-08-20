@@ -3,7 +3,7 @@ from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                                QMessageBox,
                                QGraphicsEllipseItem, QGraphicsRectItem, QGraphicsLineItem,
                                QDialog, QDialogButtonBox, QFormLayout, QLineEdit)
-from PySide6.QtGui import QPainter
+from PySide6.QtGui import QPainter, QPixmap
 from PySide6.QtCore import Qt
 
 import networkx as nx
@@ -104,6 +104,23 @@ class MainWindow(QMainWindow):
         p_layout.addSpacing(10)
         p_layout.addWidget(self.calc_btn)
         self.calc_btn.setShortcut("Return")
+
+
+
+
+        p_layout.addStretch(1)  # Pushes following widgets to the bottom
+
+        logo_label = QLabel()
+        logo_pixmap = QPixmap("quiverzlive/icons/logo.png").scaled(40, 40, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        logo_label.setPixmap(logo_pixmap)
+        logo_label.setAlignment(Qt.AlignRight | Qt.AlignBottom)
+        p_layout.addWidget(logo_label)
+
+        # ----- credits -----
+        credits_label = QLabel("developed by Jazz E. Z. Ooi")
+        credits_label.setStyleSheet("color: grey; font-size: 10px;")
+        credits_label.setAlignment(Qt.AlignRight | Qt.AlignBottom)
+        p_layout.addWidget(credits_label)
 
         
         # ----- menus -----
