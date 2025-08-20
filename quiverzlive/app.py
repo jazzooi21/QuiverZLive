@@ -1,7 +1,7 @@
 import sys, os
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QProxyStyle, QStyle
-from window_main import MainWindow
+from .window_main import MainWindow
 
 
 # The following hack is needed on windows in order to show the icon in the taskbar
@@ -47,6 +47,7 @@ def main() -> None:
 if __name__ == "__main__":   # `python -m quiverzlive.app`
 
     main()
+
 
 
 
