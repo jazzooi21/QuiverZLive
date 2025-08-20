@@ -1,4 +1,4 @@
-QuiverZLive is an interactive tool for working with quivers.
+**QuiverZLive** is an interactive tool for working with quivers.
 
 ## Instructions
 
@@ -8,4 +8,4 @@ To install from source, you need Python >= 3.9 and pip. If you have those, just 
     cd QuiverZLive
     pip install .
 
-Then, you can run ZXLive by typing `qvzl`, `quiverzlive` or `QuiverZLive`.
+Then, you can run **QuiverZLive** by typing `qvzl`, `quiverzlive` or `QuiverZLive`.
