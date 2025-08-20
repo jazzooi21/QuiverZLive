@@ -1,2 +1,2 @@
-python -m app
+python -m QuiverZLive
 PAUSE
