@@ -8,7 +8,7 @@ from .window_main import MainWindow
 # See https://stackoverflow.com/questions/1551605/how-to-set-applications-taskbar-icon-in-windows-7/1552105#1552105
 if os.name == 'nt':
     import ctypes
-    myappid = 'qvz.0.0.1' # arbitrary string
+    myappid = 'qvzl' # arbitrary string
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)  # type: ignore
 
 def resource_path(rel):
@@ -46,3 +46,4 @@ def main() -> None:
 
 if __name__ == "__main__":   # `python -m quiverzlive.app`
     main()
+
