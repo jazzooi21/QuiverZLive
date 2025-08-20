@@ -2,8 +2,37 @@
   <img src="./quiverzlive/icons/logo.png" alt="logo" width="100"/>
 </p>
 
-**QuiverZLive** is an interactive tool for working with quivers.
+**QuiverZLive** is an interactive tool for working with quivers ($3d N=4$).
 
+
+Heavily inspired by [`zxlive`](https://github.com/zxcalc/zxlive).
+
+## Features
+
+#### Calculations:
+
+- Adjacency Matrix
+	+ Unframed unitary quivers
+- Global Symmetry Subgroup
+	+ Coulomb branch:\
+	  Mixed unitary gauge groups
+	+ Higgs branch:\
+	  Unitary and orthosymplectic quivers
+- Hilbert Series
+	+ Coulomb branch:\
+	  Mixed unitary quivers
+	+ Higgs branch:\
+	  (not implemented)
+
+#### Quiver Manipulations:
+
+- Gauge/Ungauge Quiver
+- Find 3d Mirror
+	+ Linear mixed unitary quivers
+- Hasse Diagram
+	+ Unframed unitary quivers
+
+---
 ## Installation instructions
 
 #### Download `.zip` folder from `github`
@@ -21,33 +50,6 @@ To install from source, you need `Python (>= 3.9)` and `pip`. If you have those,
     pip install .
 
 Then, you can run **QuiverZLive** by typing `qvzl`, `quiverzlive` or `QuiverZLive`.
-
-
-## Features
-
-#### Calculations:
-
-- Adjacency matrix calculations
-	+ Unframed unitary quivers
-- Global symmetry subgroup
-	+ Coulomb branch:\
-	  Mixed unitary gauge groups
-	+ Higgs branch:\
-	  Unitary and orthosymplectic quivers
-- Hilbert series
-	+ Coulomb branch:\
-	  Mixed unitary quivers
-	+ Higgs branch:\
-	  (not implemented)
-
-#### Quiver Manipulations:
-
-- Gauge/ungauge quiver
-- Find 3d mirror
-	+ Linear mixed unitary quivers
-- Hasse diagram
-	+ Unframed unitary quivers
-
 
 
 
