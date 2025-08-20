@@ -2,7 +2,7 @@
   <img src="./quiverzlive/icons/logo.png" alt="logo" width="100"/>
 </p>
 
-**QuiverZLive** is an interactive tool for working with quivers ($3d N=4$).
+**QuiverZLive** is an interactive tool for working with quivers ($3d\;\mathcal{N}=4$).
 
 
 Heavily inspired by [`zxlive`](https://github.com/zxcalc/zxlive).
@@ -50,6 +50,7 @@ To install from source, you need `Python (>= 3.9)` and `pip`. If you have those,
     pip install .
 
 Then, you can run **QuiverZLive** by typing `qvzl`, `quiverzlive` or `QuiverZLive`.
+
 
 
 
