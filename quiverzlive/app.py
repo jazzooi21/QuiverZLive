@@ -3,8 +3,6 @@ from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QProxyStyle, QStyle
 from window_main import MainWindow
 
-from pathlib import Path
-
 # The following hack is needed on windows in order to show the icon in the taskbar
 # See https://stackoverflow.com/questions/1551605/how-to-set-applications-taskbar-icon-in-windows-7/1552105#1552105
 if os.name == 'nt':
@@ -12,15 +10,9 @@ if os.name == 'nt':
     myappid = 'qvz.0.0.1' # arbitrary string
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)  # type: ignore
 
-def resource_path(rel: str) -> str:
-    # PyInstaller support
-    if hasattr(sys, "_MEIPASS"):
-        base = Path(sys._MEIPASS)
-    else:
-        # directory where this file lives
-        base = Path(__file__).resolve().parent
-    return str(base / rel)
-
+def resource_path(rel):
+    base = getattr(sys, "_MEIPASS", os.path.abspath("."))
+    return os.path.join(base, rel)
 
 
 # this custom style allows tooltips to appear instantly without delay
@@ -54,4 +46,5 @@ def main() -> None:
 if __name__ == "__main__":   # `python -m quiverzlive.app`
 
     main()
+
 
