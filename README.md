@@ -9,14 +9,14 @@ Quivers are a central tool in modern mathematical physics, encoding gauge theori
 
 ## Installation instructions
 
-#### Download from `github`
+#### Download from `github`:
 Download and the `.zip` and unpack directory. 
 
 If dependencies are installed (`PySide6`, `numpy`, `sympy` and `networkx` --- see `requirements.txt`), the application can be run with `run QuiverZLive.bat`.
 
 If desired, a shortcut (desktop or otherwise) to the `.bat` file can be created for easier access.
 
-#### Installing from source
+#### Installing from source:
 To install from source, you need `Python (>= 3.9)` and `pip`. If you have those, just run:
 
     git clone https://github.com/jazzooi21/QuiverZLive.git
@@ -79,4 +79,5 @@ Then, you can run **QuiverZLive** by typing `qvzl`, `quiverzlive` or `QuiverZLiv
 - `calc_hasse.py`: Hasse diagram calculation logic
 - `calc_HS_C.py`: Hilbert series calculation logic for mixed unitary quivers
 - `calc_linearmirror.py`: 3d mirror calculation logic for linear mixed unitary quivers
+
 
