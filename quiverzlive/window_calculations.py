@@ -164,18 +164,23 @@ class CalculationsWindow(QMainWindow):
             self.glob_symm_subgp_H_btn.setEnabled(False)
             self.glob_symm_subgp_H_btn.setToolTip("Calculate Higgs Branch global symmetry subgroup.\n"
                                               "(this may or may not be the global symmetry group)\n"
-                                              "Currently only developed for unitary or orthosymplectic gauge nodes.\n"
+                                              "Currently only developed for unitary or orthosymplectic quivers.\n"
                                               "Not implemented for unitary-orthosymplectic quivers.")
             
 
         # --------------------- HS buttons ---------------------
         self.HS_C_btn = QPushButton("Coulomb")
-        self.HS_C_btn.setToolTip("Calculate the Hilbert Series of the Coulomb branch for the current quiver.")
+        self.HS_C_btn.setToolTip("Calculate the Coulomb branch Hilbert Series.")
         self.HS_C_btn.clicked.connect(self._HS_C)
 
         self.HS_H_btn = QPushButton("Higgs")
-        self.HS_H_btn.setToolTip("Calculate the Hilbert Series of the Higgs branch for the current quiver.")
+        self.HS_H_btn.setToolTip("Calculate the Higgs branch Hilbert Series.")
         self.HS_H_btn.setEnabled(False)
+
+        if any(d.get("gp_type") in ("SO","USp") for d in nodes):
+            self.HS_C_btn.setEnabled(False)
+            self.HS_C_btn.setToolTip("Calculate the Coulomb branch Hilbert Series.\n"
+                                     "Currently only developed for mixed unitary quivers.")
 
         # --------------------- 3d Mirror Button ---------------------
         self.linear_mirror_btn = QPushButton("Find 3d Mirror")
