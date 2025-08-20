@@ -6,7 +6,7 @@
 
 ## Features
 
-#### Calculation
+#### Calculations:
 
 - Adjacency matrix calculations
 	+ Unframed unitary quivers
@@ -17,7 +17,8 @@
 	+ Coulomb branch: Mixed unitary quivers
 	+ Higgs branch: (not implemented)
 
-#### Quiver Manipulation
+#### Quiver Manipulations:
+
 - Gauge/ungauge quiver
 - Find 3d mirror
 	+ Linear mixed unitary quivers
