@@ -34,11 +34,15 @@ Issue-Tracker = "https://github.com/jazzooi21/QuiverZLive/issues"
 
 [tool.setuptools]
 packages = [
-    "QuiverZLive"
+    "quiverzlive"
 ]
 
 [project.scripts]
-QuiverZLive = "QuiverZLive.app:main"
+QuiverZLive = "quiverzlive.app:main"
+quiverzlive = "quiverzlive.app:main"
+qvzl = "quiverzlive.app:main"
 
 [project.gui-scripts]
-QuiverZLive = "QuiverZLive.app:main"
+QuiverZLive = "quiverzlive.app:main"
+quiverzlive = "quiverzlive.app:main"
+qvzl = "quiverzlive.app:main"
