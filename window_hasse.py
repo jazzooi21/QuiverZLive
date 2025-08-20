@@ -1,8 +1,8 @@
 from __future__ import annotations
 from typing import Dict, List, Optional, Tuple
 
-from PySide6.QtCore import Qt, QPointF, QRectF, QMarginsF
-from PySide6.QtGui import QPainter, QPen, QBrush, QImage, QPixmap, QPainterPath, QFont, QFontMetrics, QColor
+from PySide6.QtCore import Qt, QPointF, QRectF, QMarginsF, QTimer
+from PySide6.QtGui import QPainter, QPen, QBrush, QImage, QPixmap, QPainterPath, QFont, QFontMetrics, QColor, QTransform
 from PySide6.QtWidgets import (QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QGraphicsPathItem, QGraphicsItem, QMenu, QMessageBox,
                                 QDialog, QVBoxLayout, QScrollArea, QWidget, QHBoxLayout,
                                     QPushButton, QLabel)
@@ -356,6 +356,14 @@ class NodeItem(QGraphicsPixmapItem):
                     self.open_callback(chosen_qg)
                 super().mouseDoubleClickEvent(event)
                 return
+            # Remove isomorphic duplicates from sub_quivers
+            unique_quivers = []
+            for qg in self.sub_quivers:
+                if not any(is_isomorphic(qg, uq) for uq in unique_quivers):
+                    unique_quivers.append(qg)
+            
+            self.sub_quivers = unique_quivers
+            
         
 
         if len(self.sub_quivers) == 1:
@@ -647,6 +655,8 @@ class HasseDiagramView(QGraphicsView):
 
         self._panning = False
         self._pan_start = None
+        self._user_scaled = False          # <- track if user has zoomed
+        self._initial_fit_done = False     # <- run one-time fit
         self.viewport().setCursor(Qt.OpenHandCursor)
 
         # 1) base positions from the full graph (IDs preserved)
@@ -706,8 +716,42 @@ class HasseDiagramView(QGraphicsView):
         rect = scene.itemsBoundingRect()
         pad = max(rect.width(), rect.height())  # scale with diagram size
         scene.setSceneRect(rect.adjusted(-pad, -pad, pad, pad))
+        # Do first fit after the widget is shown (so it knows its real size)
+        QTimer.singleShot(0, self._fit_all)
         # enable item dragging; keep view itself non-dragging (so mouse drags items)
         self.setDragMode(QGraphicsView.NoDrag)
+
+
+    def _fit_all(self, margin: float = 20.0):
+        if self.scene() is None:
+            return
+        rect = self.scene().itemsBoundingRect().marginsAdded(QMarginsF(margin, margin, margin, margin))
+        if rect.isNull() or not rect.isValid():
+            return
+        # Reset any prior zoom/pan transform before fitting
+        self.setTransform(QTransform())
+        self.fitInView(rect, Qt.KeepAspectRatio)
+        self._initial_fit_done = True
+        self._user_scaled = False  # just fitted
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        # Keep it fitted on window resizes until the user manually zooms
+        if not self._user_scaled and self._initial_fit_done:
+            self._fit_all()
+
+    def wheelEvent(self, e):
+        factor = 1.15 if e.angleDelta().y() > 0 else 1/1.15
+        self.scale(factor, factor)
+        self._user_scaled = True  # user took control
+
+    def keyPressEvent(self, e):
+        # Press 'R' to refit everything any time
+        if e.key() in (Qt.Key_R):
+            self._fit_all()
+            e.accept()
+            return
+        super().keyPressEvent(e)
 
 
     def mousePressEvent(self, e):
